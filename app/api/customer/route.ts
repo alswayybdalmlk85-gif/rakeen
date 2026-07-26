@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const prisma = new PrismaClient();
 
-const prisma = globalForPrisma.prisma || new PrismaClient();
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // 1. حفظ بيانات العميل في قاعدة البيانات (حسب الكود لديك)
+    // 1. حفظ الكود لديك
     const newCustomer = await prisma.customer.create({
       data: {
         name: body.name,
@@ -20,14 +17,14 @@ export async function POST(request: Request) {
       },
     });
 
-    // 2. إرسال إشعار التيليجرام بالبيانات الصحيحة التي أنشأناها الآن
-    const TELEGRAM_BOT_TOKEN = "8857116906:AAFRLO_9sP2UJWXHtlLWUj-CyqJLcE5dudc";
+    // 2. إرسال إشعار تليجرام بالبيانات
+    const TELEGRAM_BOT_TOKEN = "8857116986:AAFRLO_9sP2UJWXHtllW5J-CyqJLcE5dudc";
     const CHAT_ID = "7842160657";
 
-   const message = `🚀 عميل جديد في منصة ركين!\n\n👤 الاسم: ${newCustomer.name}\n📞 الهاتف: ${newCustomer.phone}\n📧 البريد: ${newCustomer.email || 'غير متوفر'}\n📍 العنوان: ${newCustomer.location || 'غير متوفر'}`;
+    const message = `عميل جديد في منصة ركين 🛒:\n\nالاسم: ${newCustomer.name}\nالهاتف: ${newCustomer.phone}`;
 
     await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
+      method: 'POST',
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: CHAT_ID,
@@ -35,25 +32,19 @@ export async function POST(request: Request) {
       }),
     });
 
-    return NextResponse.json({
-      success: true,
-      message: 'تم حفظ البيانات وإرسال إشعار تيليجرام بنجاح',
-      customer: newCustomer,
-    }, { status: 201 });
+    return NextResponse.json({ success: true, message: "تم بنجاح", data: newCustomer }, { status: 200 });
 
   } catch (error: any) {
-    console.error('Database Error:', error);
-    return NextResponse.json({ success: false, message: 'خطأ في الخادم' }, { status: 500 });
+    console.error("خطأ في الخادم:", error);
+    return NextResponse.json({ success: false, message: "خطأ في الخادم" }, { status: 500 });
   }
 }
 
 export async function GET() {
   try {
-    const customers = await prisma.customer.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    return NextResponse.json({ success: true, customers });
+    const customers = await prisma.customer.findMany();
+    return NextResponse.json({ success: true, customers }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: 'خطأ في جلب البيانات' }, { status: 500 });
+    return NextResponse.json({ success: false, message: "خطأ في جلب البيانات" }, { status: 500 });
   }
 }
